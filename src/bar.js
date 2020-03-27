@@ -21,7 +21,8 @@ export default class Bar {
     }
 
     prepare_values() {
-        this.invalid = this.task.invalid;
+        this.status = this.task.status;
+        this.unscheduled = this.task.unscheduled;
         this.height = this.gantt.options.bar_height;
         this.x = this.compute_x();
         this.y = this.compute_y();
@@ -68,6 +69,7 @@ export default class Bar {
 
     draw() {
         this.draw_bar();
+        this.draw_thumbnail();
         this.draw_progress_bar();
         this.draw_label();
         this.draw_resize_handles();
@@ -84,12 +86,15 @@ export default class Bar {
             class: 'bar',
             append_to: this.bar_group
         });
-
         animateSVG(this.$bar, 'width', 0, this.width);
 
         if (this.invalid) {
             this.$bar.classList.add('bar-invalid');
         }
+        if (this.unscheduled) {
+            this.$bar.classList.add('bar-unscheduled');
+        }
+        this.$bar.classList.add(`status-${this.status}`);
     }
 
     draw_progress_bar() {
@@ -108,16 +113,69 @@ export default class Bar {
         animateSVG(this.$bar_progress, 'width', 0, this.progress_width);
     }
 
+    format_label_innerHTML({ name, start, end }) {
+        return `${date_utils.short_hand_format(
+            start
+        )} - ${date_utils.short_hand_format(end)}`;
+    }
+
+    draw_thumbnail() {
+        let x_offset = 0;
+        let y_offset = 5;
+        let defs, clipPath;
+
+        defs = createSVG('defs', {
+            append_to: this.bar_group
+        });
+
+        createSVG('rect', {
+            id: 'rect_' + this.task.id,
+            x: this.x + x_offset,
+            y: this.y + y_offset,
+            width: 20,
+            height: 20,
+            rx: '15',
+            class: 'img_mask',
+            append_to: defs
+        });
+
+        clipPath = createSVG('clipPath', {
+            id: 'clip_' + this.task.id,
+            append_to: defs
+        });
+
+        createSVG('use', {
+            href: '#rect_' + this.task.id,
+            append_to: clipPath
+        });
+
+        this.$thumbnail = createSVG('image', {
+            x: this.x + x_offset,
+            y: this.y + y_offset,
+            width: 20,
+            height: 20,
+            class: `bar-img ${this.task.overdue ? 'show' : 'hide'}`,
+            href: this.task.thumbnail,
+            clipPath: 'clip_' + this.task.id,
+            append_to: this.bar_group
+        });
+    }
+
     draw_label() {
-        createSVG('text', {
+        this.$bar_label = createSVG('text', {
             x: this.x + this.width / 2,
             y: this.y + this.height / 2,
-            innerHTML: this.task.name,
+            innerHTML: this.format_label_innerHTML({
+                name: this.task.name,
+                start: this.task._start,
+                end: this.task._end
+            }),
             class: 'bar-label',
             append_to: this.bar_group
         });
         // labels get BBox in the next tick
-        requestAnimationFrame(() => this.update_label_position());
+        // eslint-disable-next-line
+    requestAnimationFrame(() => this.update_label_position())
     }
 
     draw_resize_handles() {
@@ -148,13 +206,13 @@ export default class Bar {
             append_to: this.handle_group
         });
 
-        if (this.task.progress && this.task.progress < 100) {
-            this.$handle_progress = createSVG('polygon', {
-                points: this.get_progress_polygon_points().join(','),
-                class: 'handle progress',
-                append_to: this.handle_group
-            });
-        }
+        // if (this.task.progress && this.task.progress < 100) {
+        //   this.$handle_progress = createSVG('polygon', {
+        //     points: this.get_progress_polygon_points().join(','),
+        //     class: 'handle progress',
+        //     append_to: this.handle_group
+        //   })
+        // }
     }
 
     get_progress_polygon_points() {
@@ -195,7 +253,11 @@ export default class Bar {
     show_popup() {
         if (this.gantt.bar_being_dragged) return;
 
-        const start_date = date_utils.format(this.task._start, 'MMM D', this.gantt.options.language);
+        const start_date = date_utils.format(
+            this.task._start,
+            'MMM D',
+            this.gantt.options.language
+        );
         const end_date = date_utils.format(
             date_utils.add(this.task._end, -1, 'second'),
             'MMM D',
@@ -207,7 +269,7 @@ export default class Bar {
             target_element: this.$bar,
             title: this.task.name,
             subtitle: subtitle,
-            task: this.task,
+            task: this.task
         });
     }
 
@@ -250,14 +312,35 @@ export default class Bar {
             changed = true;
             this.task._end = new_end_date;
         }
+        this.update_label_content({ new_start_date, new_end_date });
+
+        if (new_end_date > date_utils.today()) {
+            if (this.$thumbnail.classList.contains('show')) {
+                this.$thumbnail.classList.remove('show');
+                this.$thumbnail.classList.add('hide');
+            }
+        }
+        if (new_end_date < date_utils.today()) {
+            if (this.$thumbnail.classList.contains('hide')) {
+                this.$thumbnail.classList.remove('hide');
+                this.$thumbnail.classList.add('show');
+            }
+        }
 
         if (!changed) return;
-
         this.gantt.trigger_event('date_change', [
             this.task,
             new_start_date,
             date_utils.add(new_end_date, -1, 'second')
         ]);
+    }
+
+    update_label_content({ new_start_date, new_end_date }) {
+        this.$bar_label.innerHTML = this.format_label_innerHTML({
+            name: this.task.name,
+            start: new_start_date,
+            end: new_end_date
+        });
     }
 
     progress_changed() {
@@ -318,10 +401,36 @@ export default class Bar {
         );
     }
 
+    update_bar_with_data({ start_date, end_date }) {
+        const new_start_date = new Date(start_date);
+        const new_end_date = new Date(end_date);
+        if (
+            this.task._start.getTime() === new_start_date.getTime() &&
+            this.task._end.getTime() === new_end_date.getTime()
+        ) {
+            return;
+        }
+        this.task._start = new_start_date;
+        this.task._end = new_end_date;
+        const x = this.compute_x();
+        this.duration =
+            date_utils.diff(this.task._end, this.task._start, 'hour') /
+            this.gantt.options.step;
+        const width = this.gantt.options.column_width * this.duration;
+        if (width !== this.width) {
+            this.update_bar_position({ x, width });
+        } else {
+            this.update_bar_position({ x });
+        }
+        this.update_label_content({ new_start_date, new_end_date });
+    }
+
     get_snap_position(dx) {
-        let odx = dx,
-            rem,
-            position;
+        let odx = dx;
+
+        let rem;
+
+        let position;
 
         if (this.gantt.view_is('Week')) {
             rem = dx % (this.gantt.options.column_width / 7);
@@ -368,14 +477,27 @@ export default class Bar {
     }
 
     update_label_position() {
-        const bar = this.$bar,
-            label = this.group.querySelector('.bar-label');
+        const img_mask = this.bar_group.querySelector('.img_mask') || '';
+        const bar = this.$bar;
 
-        if (label.getBBox().width > bar.getWidth()) {
+        const label = this.group.querySelector('.bar-label');
+        const img = this.group.querySelector('.bar-img');
+
+        let padding = -25;
+
+        if (label.getBoundingClientRect().width > bar.getWidth()) {
             label.classList.add('big');
             label.setAttribute('x', bar.getX() + bar.getWidth() + 5);
+            if (img) {
+                img.setAttribute('x', bar.getX() + bar.getWidth() + padding);
+                img_mask.setAttribute('x', bar.getX() + bar.getWidth() + padding);
+            }
         } else {
             label.classList.remove('big');
+            if (img) {
+                img.setAttribute('x', bar.getX() + padding);
+                img_mask.setAttribute('x', bar.getX() + padding);
+            }
             label.setAttribute('x', bar.getX() + bar.getWidth() / 2);
         }
     }
@@ -400,8 +522,8 @@ export default class Bar {
         }
     }
 }
-
-function isFunction(functionToCheck) {
+/* eslint-disable-next-line */
+function isFunction (functionToCheck) {
     var getType = {};
     return (
         functionToCheck &&

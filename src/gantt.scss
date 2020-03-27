@@ -10,33 +10,58 @@ $text-color: #333 !default;
 $blue: #a3a3ff !default;
 $handle-color: #ddd !default;
 
+:root {
+	--dusk: #43496a;
+	--soft-dusk: #43496a99;
+	--dark: #192438;
+	--cloudy-blue: #bfc2c7;
+	--pale-grey: #eff1f5;
+	--tea: #60be85;
+	--soft-green-24: rgba(120, 194, 143, 0.24);
+	--hospital-green: #99dfaf;
+	--high-green: #A7FFC2;
+	--soft-green: #78c28f;
+	--dark-10: rgba(25, 36, 56, 0.1);
+	--fr-yellow: #fdbd39;
+	--fr-red: #e25555;
+	--fr-pink: #FF8FA1;
+	--fr-grey: #72757e;
+}
+
 .gantt {
+	overflow: hidden !important;
 	.grid-background {
-		fill: none;
+		fill: var(--dusk);
 	}
 	.grid-header {
-		fill: #ffffff;
-		stroke: $border-color;
+		fill: var(--dusk);
+		color: #fff;
+		stroke: #323956;
 		stroke-width: 1.4;
 	}
 	.grid-row {
-		fill: #ffffff;
+		fill: var(--dusk);
+		border: none;
 	}
-	.grid-row:nth-child(even) {
-		fill: $light-bg;
+	.grid-row-divider {
+		fill: #323956;
+		border: none;
+		stroke-width: 2px !important;
+		stroke: rgba(34,36,38,.15) !important;
 	}
 	.row-line {
-		stroke: $light-border-color;
+		stroke: rgba(255, 255, 255, 0.1);
 	}
 	.tick {
-		stroke: $border-color;
-		stroke-width: 0.2;
+		stroke: #323956;
+		stroke-width: 0.6;
 		&.thick {
-			stroke-width: 0.4;
+			stroke: rgba(167, 255, 194, 0.3);
+			stroke-width: 1.5;
 		}
 	}
 	.today-highlight {
-		fill: $light-yellow;
+		fill: var(--hospital-green);
 		opacity: 0.5;
 	}
 
@@ -47,14 +72,14 @@ $handle-color: #ddd !default;
 	}
 
 	.bar {
-		fill: $bar-color;
+		fill: transparent;
 		stroke: $bar-stroke;
 		stroke-width: 0;
 		transition: stroke-width .3s ease;
 		user-select: none;
 	}
 	.bar-progress {
-		fill: $blue;
+		fill: transparent;
 	}
 	.bar-invalid {
 		fill: transparent;
@@ -67,14 +92,14 @@ $handle-color: #ddd !default;
 		}
 	}
 	.bar-label {
-		fill: #fff;
+		fill: transparent;
 		dominant-baseline: central;
 		text-anchor: middle;
 		font-size: 12px;
 		font-weight: lighter;
 
 		&.big {
-			fill: $text-light;
+			fill: transparent;
 			text-anchor: start;
 		}
 	}
@@ -92,27 +117,19 @@ $handle-color: #ddd !default;
 		outline: none;
 
 		&:hover {
-			.bar {
-				fill: darken($bar-color, 5);
-			}
-
-			.bar-progress {
-				fill: darken($blue, 5);
-			}
-
 			.handle {
 				visibility: visible;
 				opacity: 1;
+			}
+
+			.bar-label {
+				fill: #fff;
 			}
 		}
 
 		&.active {
 			.bar {
-				fill: darken($bar-color, 5);
-			}
-
-			.bar-progress {
-				fill: darken($blue, 5);
+				stroke-width: 3px;
 			}
 		}
 	}
@@ -122,23 +139,68 @@ $handle-color: #ddd !default;
 		text-anchor: middle;
 	}
 	.upper-text {
-		fill: $text-light;
+		fill: var(--high-green);
 	}
 	.lower-text {
-		fill: $text-color;
+		fill: #fff;
 	}
 
 	.hide {
 		display: none;
 	}
+
+	.show {
+		display: block;
+	}
+
+	g[class*='unscheduled'] {
+		display: none;
+	}
+
+	g[class*='divider'] {
+		display: none;
+	}
+
+	.status-failed {
+		fill: var(--fr-pink);
+	}
+	.status-complete {
+		fill: var(--hospital-green) !important;
+	}
+	.status-todo {
+		fill: rgba(145, 151, 163, 0.3);
+		stroke-width: 2px;
+		stroke: rgba(255, 255, 255, 0.3);
+	}
+	.status-in_progress {
+		fill: transparent;
+		stroke-width: 2px;
+		stroke: #A7FFC2;
+	}
+	.status-redline {
+		stroke-width: 2px;
+		fill: transparent;
+		stroke: var(--fr-pink);
+	}
+	.status-hold {
+		fill: transparent;
+		stroke-width: 2px;
+		stroke: white;
+	}
+	.status-canceled {
+		fill: transparent;
+		stroke-width: 2px;
+		stroke: rgba(0, 0, 0, 0.5);
+	}
 }
 
 .gantt-container {
-	position: relative;
+	background-color: var(--dusk);
 	overflow: auto;
 	font-size: 12px;
 
 	.popup-wrapper {
+		z-index: 3;
 		position: absolute;
 		top: 0;
 		left: 0;
