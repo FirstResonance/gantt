@@ -12,14 +12,13 @@ export default class Popup {
             <div class="pointer"></div>
         `;
 
-        this.hide();
-
         this.title = this.parent.querySelector('.title');
         this.subtitle = this.parent.querySelector('.subtitle');
         this.pointer = this.parent.querySelector('.pointer');
     }
 
     show(options) {
+        this.make();
         if (!options.target_element) {
             throw new Error('target_element is required to show popup');
         }
@@ -34,8 +33,7 @@ export default class Popup {
             this.parent.innerHTML = html;
             this.pointer = this.parent.querySelector('.pointer');
         } else {
-            // set data
-            this.title.innerHTML = options.title;
+            this.title.innerHTML = options.task.popup_text;
             this.subtitle.innerHTML = options.subtitle;
             this.parent.style.width = this.parent.clientWidth + 'px';
         }
@@ -54,8 +52,8 @@ export default class Popup {
             this.parent.style.top = position_meta.y + 'px';
 
             this.pointer.style.transform = 'rotateZ(90deg)';
-            this.pointer.style.left = '-7px';
-            this.pointer.style.top = '2px';
+            this.pointer.style.left = '-5px';
+            this.pointer.style.top = '45%';
         }
 
         // show
@@ -63,6 +61,6 @@ export default class Popup {
     }
 
     hide() {
-        this.parent.style.opacity = 0;
+        this.parent.innerHTML = '' ;
     }
 }
